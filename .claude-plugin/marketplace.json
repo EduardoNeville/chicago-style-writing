@@ -1,7 +1,7 @@
 {
   "name": "chicago-style-writing",
-  "description": "Skill and linter for writing English prose to The Chicago Manual of Style, 18th edition (2024).",
-  "version": "1.0.0",
+  "description": "Skill and linter for writing English prose to The Chicago Manual of Style, 18th edition (2024), including the slop patterns that make generated prose sound generic.",
+  "version": "1.1.0",
   "owner": {
     "name": "Eduardo Neville",
     "url": "https://github.com/EduardoNeville"
@@ -12,7 +12,7 @@
       "source": ".",
       "description": "Write and edit prose to CMOS 18: sentence clarity, punctuation, hyphenation, numbers, abbreviations, titles, quotations, and citations. Ships a deterministic linter so conformance is checkable.",
       "category": "writing",
-      "tags": ["writing", "editing", "style", "chicago", "lint"]
+      "tags": ["writing", "editing", "style", "chicago", "slop", "lint"]
     }
   ]
 }

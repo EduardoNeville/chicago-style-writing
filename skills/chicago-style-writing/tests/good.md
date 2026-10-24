@@ -3,7 +3,7 @@
 The report was late. It arrived on Friday, which was unexpected.
 
 “Please fix this,” she said, and it is clear that three things happened: apples, pears, and
-figs were lost. The cost ran from 2019 to 2022 and required 5 km of shelving—or so the note
+figs were lost. The cost ran from 2019 to 2022 and required 5 km of shelving, or so the note
 claimed (no receipt was attached, and so forth).
 
 Dr. Smith Jr. paid $1,200 for 3 percent of the shares in Acme Inc. on January 5, 2020 (dated

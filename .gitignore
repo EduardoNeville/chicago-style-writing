@@ -1,8 +1,12 @@
 # The source book stays out of the repository.
 assets/
 
+# Pi directory
+.pi/
+
 # Subagent scratch output
 .pi-subagents/
+
 
 # Python
 __pycache__/

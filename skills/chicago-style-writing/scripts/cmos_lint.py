@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 """cmos_lint - deterministic checks for prose written in Chicago style.
 
-Every finding names the CMOS rule it enforces. Two severities:
+Every finding names its source: a CMOS rule number, or `house` for a rule of
+this skill that overrides the manual (House overrides, in SKILL.md). Two
+severities:
 
-  error  a mechanical rule of The Chicago Manual of Style, 18th ed. (2024);
-         high confidence -- fix it or knowingly override it.
+  error  must not ship: a mechanical rule of The Chicago Manual of Style, 18th
+         ed. (2024), or a house rule. Every slop rule is a house rule, and every
+         slop rule is an error.
   hint   a judgment heuristic drawn from a CMOS rule. Never auto-apply.
          Read the sentence before changing it (CMOS 2.57).
+  warn   the manual requires it, but a house style may override it, so it does not
+         fail --errors-only.
+
+--register names the register of the text (prose, spoken, display, ui). A register
+switches off the mechanical rule families that do not apply to it: no curly
+apostrophes in narration that is read aloud, no sentence-length checks on a title
+card. Slop rules are never switched off, in any register.
 
 Stdlib only; no dependencies; harness-agnostic -- run it from any agent,
 editor, or CI step.
@@ -14,6 +24,7 @@ editor, or CI step.
     python3 cmos_lint.py draft.md               # human report
     python3 cmos_lint.py --json draft.md        # machine report
     python3 cmos_lint.py --errors-only draft.md # errors, no hints
+    python3 cmos_lint.py --register spoken narration.md
     cat draft.md | python3 cmos_lint.py -       # stdin
 
 Exit status: 0 clean, 1 findings of the selected severities, 2 usage error.
@@ -125,14 +136,11 @@ RULES = [
       "no space before a mark of punctuation",
       r"(?<![.\s]) +[,;:.!?](?=\s|$)"),
     R("DASH.DOUBLE_HYPHEN", "2.17, 6.91", "error",
-      "use an em dash character, not two hyphens",
+      "two hyphens do not make a dash; use a colon, a comma, or parentheses",
       r"(?<![-\w])--(?![-\w])"),
     R("DASH.SPACED_HYPHEN", "6.91", "error",
-      "a spaced hyphen is not a dash; use an em dash",
+      "a spaced hyphen is not a dash; use a colon, a comma, or parentheses",
       r"(?<=[A-Za-z,)])\t* +-[ \t]+(?=[A-Za-z])"),
-    R("DASH.EM_SPACED", "6.91", "warn",
-      "Chicago sets the em dash with no space on either side",
-      r"\s\u2014\s"),
     R("ELLIPSIS.DOTS", "12.59, 12.62", "error",
       "use spaced ellipsis points (. . .) or the ellipsis character, "
       "not three unspaced periods",
@@ -270,9 +278,8 @@ RULES = [
       r"\b[A-Za-z]{4,}(?:tion|sion|ment|ance|ence|ity|ism)\s+of\b"),
     R("PROSE.EXPLETIVE", "5.246", "hint",
       "expletive opening: if the real subject is short, lead with it",
-      r"(?:^|(?<=[.!?]\s))\s*(?:It\s(?:is|was|seems|appears)\s+(?:important|interesting|"
-      r"clear|necessary|possible|likely|worth)\b|There\s(?:is|are|were|was)\s+"
-      r"(?:many|several|a number of|numerous|countless)\b)",
+      r"(?:^|(?<=[.!?]\s))\s*There\s(?:is|are|were|was)\s+"
+      r"(?:many|several|a number of|numerous|countless)\b",
       flags=re.M),
     R("PROSE.PASSIVE_AGENT", "5.122", "hint",
       "explicit passive agent: passive voice is often inferior to active",
@@ -281,12 +288,127 @@ RULES = [
       "sentence-initial participle with an it/there main clause: likely dangling",
       r"^[A-Z][a-z]+ing\b[^.;]{0,60},\s+(?:it|there)\s+(?:is|are|was|were|seems)\b",
       flags=re.M),
-    R("PROSE.UTILIZE", "5.254", "hint",
-      "prefer 'use'; utilize is usually an overblown alternative",
-      r"\butiliz(?:e|es|ed|ing)\b"),
+
+    # -- Slop: house rules, not CMOS rules (see House overrides) ---------
+    # Every one is an error. The manual permits some of these shapes; the House
+    # overrides entry records which rule each one displaces, so a reader can tell
+    # a deliberate departure from a mistake. A register never switches these off.
+    R("SLOP.EM_DASH", "house", "error",
+      "em dashes are banned (house override of 6.91): use a colon, a comma, or "
+      "parentheses",
+      "—"),
+    R("SLOP.BINARY_CONTRAST", "house", "error",
+      "binary contrast: state the affirmative directly",
+      r"\b(?:is|are|was|were|does|do|did)\s+not(?:\s+just|\s+merely|\s+simply)?\s+"
+      r"[^.!?\n]{1,60}[.!]\s+(?:It|That|This)(?:'s|\s+is|\s+was)\b"
+      r"|\bnot just\b[^.!?\n]{2,60}\bbut\b"
+      r"|\b(?:isn't|aren't|wasn't|weren't)\s+[^.!?\n]{1,50}[.,]\s*"
+      r"(?:it's|it is|they're|they are)\b"),
+    R("SLOP.NEGATIVE_LIST", "house", "error",
+      "negative listing: just say what it is",
+      r"\bNot (?:a|an|the) [^.!?\n]{1,40}[.!]\s+(?:Not|Just)\s+(?:a|an|the)\b"),
+    R("SLOP.THROAT_CLEARING", "house", "error",
+      "throat-clearing: cut the run-up and state the point",
+      r"(?:^|(?<=[.!?]\s))\s*(?:Here'?s (?:the thing|what I mean)"
+      r"|Let me be (?:clear|honest)|It(?:'s| is) (?:worth|important) (?:noting|to note)"
+      r"|It(?:'s| is) (?:important|interesting|worth|necessary) (?:to|that)\b"
+      r"|At the end of the day|In today'?s (?:world|landscape|market)"
+      r"|When it comes to|At its core|The (?:reality|truth) is"
+      r"|Let'?s dive in|In this article)\b",
+      flags=re.M),
+    R("SLOP.FAUX_INSIGHT", "house", "error",
+      "faux-insight setup: make the claim stand on its own",
+      r"\b(?:[Ww]hat nobody (?:tells you|mentions|talks about)"
+      r"|[Ww]hat most people (?:miss|get wrong|don'?t)"
+      r"|[Tt]he part (?:everyone|most people|nobody) (?:misses|skips|gets wrong)"
+      r"|[Tt]he thing nobody (?:tells you|says))\b"),
+    R("SLOP.COLON_REVEAL", "house", "error",
+      "colon reveal: write it as a plain sentence (house override of 6.65, 6.67)",
+      r"\bthe (?:best|real|actual|interesting|key|main|whole|only) "
+      r"(?:part|thing|reason|point)\s*:\s+[a-z]"
+      r"|\bthe (?:catch|kicker|twist|punchline|takeaway|lesson|trick"
+      r"|detail that makes it work)\s*:\s+[a-z]"
+      r"|\bhere'?s (?:the|where) (?:thing|part|catch|kicker|twist)\s*:\s+[a-z]",
+      flags=re.I),
+    R("SLOP.ING_ANALYSIS", "house", "error",
+      "trailing -ing clause that claims to explain meaning: say what it does",
+      r",\s+(?:highlight|underscor|reflect|showcas|emphasiz|signal|demonstrat)\w*ing\b"
+      r"[^.!?\n]{0,80}[.!?]"),
+    R("SLOP.PUFFERY", "house", "error",
+      "importance puffery: state the fact and let the reader judge it",
+      r"\b(?:marks? a (?:pivotal|turning) (?:moment|point)|stands? as a testament"
+      r"|a testament to|plays? a (?:vital|crucial|key) role"
+      r"|solidif\w+ (?:its|the company'?s|the team'?s) position"
+      r"|underscor\w+ (?:its|the) significance)\b"),
+    R("SLOP.WEASEL", "house", "error",
+      "weasel attribution: name the source or cut the claim",
+      r"\b(?:experts|studies|research|reports|analysts|industry)\s+"
+      r"(?:agree|shows?|suggests?|says?|indicates?|argue)\b"
+      r"|\bwidely (?:regarded|considered|seen|believed) as\b"
+      r"|\bit is (?:widely )?(?:said|believed|thought)\b",
+      flags=re.I),
+    R("SLOP.RHETORICAL_SETUP", "house", "error",
+      "rhetorical setup: drop it and make the point",
+      r"\bWhat if I told you\b|\bThink about it\s*:|\bPlot twist\s*:"),
+    R("SLOP.RECAP_ENDING", "house", "error",
+      "summary recap: end on the last concrete point, not a restatement",
+      r"(?m)^[>\s]*(?:In conclusion|To sum up|All in all|Ultimately|Overall)\b[,:]?\s"),
+    R("SLOP.BANNED_WORD", "house", "error",
+      "banned word: see the words-to-cut list in references/15-rhetoric.md",
+      r"\b(?:delve[sd]?|delving|foster\w*|leverag\w*|utiliz\w*|facilitat\w*|empower\w*"
+      r"|streamlin\w*|robust\w*|cutting-edge|paradigm shift|game changer"
+      r"|this is huge|this changes everything|tapestry|realm|beacon|multifaceted"
+      r"|meticulous|intricate|paramount|transformative|elevate[sd]?|elevating"
+      r"|embark(?:s|ed|ing)?|supercharg\w*|harness(?:es|ed|ing)?|ever-evolving)\b",
+      flags=re.I),
+    R("SLOP.EMPTY_ADVERB", "house", "error",
+      "empty adverb: cut it unless it carries emphasis or the writer's rhythm",
+      r"\b(?:just|literally|honestly|simply|actually|truly|fundamentally|importantly"
+      r"|crucially|inherently|inevitably)\b",
+      flags=re.I),
+    R("SLOP.WEAK_VERB", "house", "error",
+      "make the verb do the work (decide, analyze, help, can)",
+      r"\b(?:has|have|had) the ability to\b|\b(?:is|are|was|were) able to\b"
+      r"|\b(?:makes?|made) (?:a|an|the) (?:decision|choice|analysis|assessment"
+      r"|recommendation)\b"
+      r"|\b(?:performs?|performed) (?:a|an|the) (?:analysis|review|assessment"
+      r"|evaluation)\b"
+      r"|\bprovides? (?:assistance|support|guidance)\b",
+      flags=re.I),
 ]
 
 FORCE_SUFFIX = "st|nd|rd|th"
+
+# Registers. A register switches off the mechanical rule families that do not
+# apply to it. Slop rules are never switched off (see skipped).
+REGISTER_SKIP = {
+    "prose": (),
+    "spoken": ("QUOTE.", "PROSE.LONG_SENTENCE", "PROSE.OF_CHAIN",
+               "PROSE.NOMINALIZATION", "PROSE.WORDY_PHRASE",
+               "PROSE.PASSIVE_AGENT", "PROSE.DANGLER"),
+    "display": ("PROSE.LONG_SENTENCE", "PROSE.OF_CHAIN",
+                "PROSE.NOMINALIZATION", "PROSE.WORDY_PHRASE",
+                "PROSE.PASSIVE_AGENT", "PROSE.DANGLER", "PROSE.EXPLETIVE",
+                "COLON.AFTER_VERB", "NUMBER.SENTENCE_START"),
+    "ui": ("ABBR.", "NUMBER.", "RANGE.", "ELLIPSIS.", "QUOTE."),
+}
+
+def skipped(rule_id, register):
+    """True when this register does not apply the rule. Never true for slop."""
+    if rule_id.startswith("SLOP."):
+        return False
+    return any(rule_id.startswith(p) for p in REGISTER_SKIP[register])
+
+def in_blockquote(text, pos):
+    """True when pos sits on a line that opens a blockquote (quoted matter)."""
+    start = text.rfind("\n", 0, pos) + 1
+    return text[start:start + 200].lstrip().startswith(">")
+
+def is_list_line(text, pos):
+    """True for a list item, table row, or heading: structure, not a fragment."""
+    start = text.rfind("\n", 0, pos) + 1
+    return bool(re.match(r"\s*(?:[-*+]\s|\d+[.)]\s|\||#{1,6}\s)",
+                         text[start:start + 80]))
 
 
 # --------------------------------------------------------------------------
@@ -332,35 +454,56 @@ def line_col(text, pos):
 # --------------------------------------------------------------------------
 # Checks that need more than one regex match
 # --------------------------------------------------------------------------
-def check_dashes(masked, path, add):
-    """6.91: no more than two em dashes in one sentence (except in dialogue)."""
-    for m in re.finditer(r"[^.!?\n]*(?:\u2014[^.!?\n]*){3,}", masked):
-        for _ in range(m.group(0).count("\u2014")):
-            ln, col = line_col(masked, m.start())
-            add(Finding("DASH.EM_OVERUSE", "6.91", "warn", path, ln, col,
-                        "three or more em dashes in one sentence"))
-            break
-
-
-def check_sentences(masked, path, add):
+def check_sentences(masked, path, add, register="prose", text=None):
+    """Sentence-level checks. `text` is the unmasked source, for list detection."""
+    source = masked if text is None else text
     flat = masked.replace("\n", " ")  # same length, so offsets stay valid
     for m in re.finditer(r"[^.!?]+[.!?]?", flat):
         s = m.group(0)
         words = s.split()
         ln, col = line_col(masked, m.start())
-        if len(words) > 40:
+        if len(words) > 40 and not skipped("PROSE.LONG_SENTENCE", register):
             add(Finding("PROSE.LONG_SENTENCE", "5.229", "hint", path, ln, col,
                         f"sentence is {len(words)} words long; check that the main "
                         "clause is not buried"))
         n_of = len(re.findall(r"\bof\b", s, re.I))
-        if n_of >= 3:
+        if n_of >= 3 and not skipped("PROSE.OF_CHAIN", register):
             add(Finding("PROSE.OF_CHAIN", "5.254", "hint", path, ln, col,
                         f"{n_of} of-phrases in one sentence; remove every of-phrase "
                         "you reasonably can"))
 
+    # Slop: a stack of three or more four-word-or-shorter sentences inside one
+    # paragraph is rhythm for its own sake. Slop outranks 2.57's licence for a
+    # deliberate fragment (House overrides). A list item is not a fragment.
+    if skipped("SLOP.FRAGMENT_STACK", register):
+        return
+    for para in re.finditer(r"[^\n]+(?:\n(?!\s*\n)[^\n]+)*", masked):
+        # A list item (with its wrapped lines) is structure, not a fragment run.
+        if is_list_line(source, para.start()) or in_blockquote(masked, para.start()):
+            continue
+        run = []
+        for s in re.finditer(r"[^.!?]+[.!?]", para.group(0)):
+            txt = s.group(0).strip()
+            pos = para.start() + s.start()
+            if (txt[:1] in "-*|>" or in_blockquote(masked, pos)
+                    or is_list_line(source, pos)
+                    or len(txt.split()) > 4):
+                run = []
+                continue
+            run.append(pos)
+            if len(run) == 3:
+                ln, col = line_col(masked, run[0])
+                add(Finding("SLOP.FRAGMENT_STACK", "house", "error", path,
+                            ln, col, "three short fragments in a row: write "
+                            "sentences, not rhythm"))
+                run = []
 
-def check_articles(masked, path, add):
+
+def check_articles(masked, path, add, register="prose"):
     """a/an by spoken sound: 7.32, 7.33, 5.78, 10.10."""
+    if skipped("PROSE.AN", register):
+        return
+
     def report(m, why):
         ln, col = line_col(masked, m.start())
         add(Finding("PROSE.AN", "7.32, 7.33, 5.78", "error", path, ln, col, why,
@@ -400,8 +543,11 @@ def check_articles(masked, path, add):
                 report(m, f"consonant sound: use 'a {nxt}'")
 
 
-def check_titles(text, masked, path, add):
+def check_titles(text, masked, path, add, register="prose"):
     """Headline-style title case: 8.160 rules 1-3, 8.162."""
+    if skipped("TITLE.SHORT_WORD_CAPPED", register):
+        return
+
     def examine(segment, seg_start, require_title_case=True):
         words = list(re.finditer(r"[A-Za-z][A-Za-z'\u2019-]*", segment))
         if len(words) < 3:
@@ -435,6 +581,19 @@ def check_titles(text, masked, path, add):
 def suppressed(rule_id, masked, m):
     s, e = m.span()
     local = masked[max(0, s - 12):min(len(masked), e + 12)]
+
+    # Quoted matter is reproduced, not authored (2.67): a line that opens a
+    # blockquote is exempt from the slop rules.
+    if rule_id.startswith("SLOP.") and in_blockquote(masked, s):
+        return True
+
+    if rule_id == "SLOP.EMPTY_ADVERB":
+        word, after = m.group(0).lower(), masked[e:e + 12]
+        if word == "just" and re.match(
+                r"\s+(?:as|before|after|when|once|enough|now|in case|so|over|"
+                r"under|like|yet|beyond|there)\b", after):
+            return True
+        return word == "simply" and bool(re.match(r"\s+put\b", after))
 
     if rule_id == "RANGE.HYPHEN":
         # ISO dates (9.38) legitimately use hyphens, including the second part.
@@ -482,7 +641,7 @@ def suppressed(rule_id, masked, m):
 # --------------------------------------------------------------------------
 # Driver
 # --------------------------------------------------------------------------
-def lint(text, path="<text>"):
+def lint(text, path="<text>", register="prose"):
     masked, spans = mask(text)
     findings = []
 
@@ -493,6 +652,8 @@ def lint(text, path="<text>"):
         return any(s < b and e > a for a, b in spans)
 
     for rule in RULES:
+        if skipped(rule.rule, register):
+            continue
         for m in rule.rx.finditer(masked):
             if rule.rj and rule.rj.search(m.group(0)):
                 continue
@@ -505,10 +666,9 @@ def lint(text, path="<text>"):
             add(Finding(rule.rule, rule.cmos, rule.severity, path, ln, col,
                         rule.message, m.group(0).strip()[:60]))
 
-    check_dashes(masked, path, add)
-    check_sentences(masked, path, add)
-    check_articles(masked, path, add)
-    check_titles(text, masked, path, add)
+    check_sentences(masked, path, add, register, text)
+    check_articles(masked, path, add, register)
+    check_titles(text, masked, path, add, register)
 
     out, seen = [], set()
     for f in sorted(findings, key=lambda f: (f.line, f.col, f.rule)):
@@ -527,6 +687,8 @@ def main(argv=None):
     ap.add_argument("files", nargs="+", help="files to check, or - for stdin")
     ap.add_argument("--json", action="store_true", help="machine-readable report")
     ap.add_argument("--errors-only", action="store_true", help="suppress hints")
+    ap.add_argument("--register", default="prose", choices=sorted(REGISTER_SKIP),
+                    help="register of the text (default: prose)")
     ap.add_argument("--summary", action="store_true", help="counts only")
     args = ap.parse_args(argv)
 
@@ -537,7 +699,7 @@ def main(argv=None):
         except OSError as exc:
             print(f"cmos_lint: {exc}", file=sys.stderr)
             return 2
-        found = lint(text, path)
+        found = lint(text, path, args.register)
         if args.errors_only:
             found = [f for f in found if f.severity == "error"]
         all_findings += found

@@ -1,7 +1,7 @@
 {
   "name": "chicago-style-writing",
-  "version": "1.0.0",
-  "description": "Write and edit English prose to The Chicago Manual of Style, 18th edition (2024). Ships an agent skill and a deterministic linter.",
+  "version": "1.1.0",
+  "description": "Write, edit, and audit English prose to The Chicago Manual of Style, 18th edition (2024), and keep AI slop out of any text an agent ships. Ships an agent skill, a judgment checklist, and a deterministic linter with registers.",
   "keywords": [
     "pi-package",
     "agent-skills",
@@ -12,6 +12,7 @@
     "copyediting",
     "writing",
     "prose",
+    "slop",
     "lint"
   ],
   "license": "MIT",

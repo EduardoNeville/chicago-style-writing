@@ -43,6 +43,11 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/skills"
           cp -r skills/chicago-style-writing "$RUNNER_TEMP/skills/"
-          python3 "$RUNNER_TEMP/skills/chicago-style-writing/scripts/cmos_lint.py" \
-            --summary "$RUNNER_TEMP/skills/chicago-style-writing/tests/demo-before.md"
-          python3 "$RUNNER_TEMP/skills/chicago-style-writing/tests/verify.py"
+          S="$RUNNER_TEMP/skills/chicago-style-writing"
+          python3 "$S/tests/verify.py"
+          # A CI gate must reject a dirty draft and pass a clean one.
+          if python3 "$S/scripts/cmos_lint.py" --errors-only "$S/tests/demo-before.md" >/dev/null; then
+            echo "cmos_lint accepted a draft it should reject" >&2
+            exit 1
+          fi
+          python3 "$S/scripts/cmos_lint.py" --errors-only "$S/tests/good.md"

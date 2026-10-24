@@ -1,0 +1,22 @@
+# The source book stays out of the repository.
+assets/
+
+# Subagent scratch output
+.pi-subagents/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Node
+node_modules/
+package-lock.json
+npm-debug.log*

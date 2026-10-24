@@ -1,0 +1,41 @@
+{
+  "name": "chicago-style-writing",
+  "version": "1.0.0",
+  "description": "Write and edit English prose to The Chicago Manual of Style, 18th edition (2024). Ships an agent skill and a deterministic linter.",
+  "keywords": [
+    "pi-package",
+    "agent-skills",
+    "chicago",
+    "cmos",
+    "style",
+    "editing",
+    "copyediting",
+    "writing",
+    "prose",
+    "lint"
+  ],
+  "license": "MIT",
+  "author": "Eduardo Neville",
+  "homepage": "https://github.com/EduardoNeville/chicago-style-writing",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EduardoNeville/chicago-style-writing.git"
+  },
+  "bugs": {
+    "url": "https://github.com/EduardoNeville/chicago-style-writing/issues"
+  },
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
+  "scripts": {
+    "verify": "python3 skills/chicago-style-writing/tests/verify.py",
+    "lint": "python3 skills/chicago-style-writing/scripts/cmos_lint.py"
+  },
+  "files": [
+    "skills",
+    "README.md",
+    "LICENSE"
+  ]
+}

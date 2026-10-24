@@ -1,0 +1,48 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prose-checks:
+    name: linter and skill self-test (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Verify the skill's own claims
+        run: python3 skills/chicago-style-writing/tests/verify.py
+      - name: Lint the repository's own prose
+        run: |
+          python3 skills/chicago-style-writing/scripts/cmos_lint.py \
+            --errors-only README.md skills/chicago-style-writing/SKILL.md
+
+  packaging-checks:
+    name: installable packaging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate manifests, names, and paths
+        run: python3 .github/checks.py
+      - name: Install the skill the way a user would
+        run: |
+          mkdir -p "$RUNNER_TEMP/skills"
+          cp -r skills/chicago-style-writing "$RUNNER_TEMP/skills/"
+          python3 "$RUNNER_TEMP/skills/chicago-style-writing/scripts/cmos_lint.py" \
+            --summary "$RUNNER_TEMP/skills/chicago-style-writing/tests/demo-before.md"
+          python3 "$RUNNER_TEMP/skills/chicago-style-writing/tests/verify.py"

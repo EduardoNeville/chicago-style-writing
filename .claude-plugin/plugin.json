@@ -1,0 +1,22 @@
+{
+  "name": "chicago-style-writing",
+  "description": "Write and edit English prose to The Chicago Manual of Style, 18th edition (2024), with a deterministic linter that checks the mechanical rules.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Eduardo Neville"
+  },
+  "homepage": "https://github.com/EduardoNeville/chicago-style-writing",
+  "repository": "https://github.com/EduardoNeville/chicago-style-writing",
+  "license": "MIT",
+  "keywords": [
+    "chicago",
+    "cmos",
+    "style",
+    "editing",
+    "copyediting",
+    "proofreading",
+    "writing",
+    "prose",
+    "lint"
+  ]
+}
